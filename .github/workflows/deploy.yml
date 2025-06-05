@@ -320,7 +320,7 @@ jobs:
           working-directory: /
           comment: Deploy
           command: |
-            mkdir -p /dockerProjects/hoit
-            curl -o /dockerProjects/hoit/zero_downtime_deploy.py https://raw.githubusercontent.com/survival-for-4000/test-back/main/infraScript/zero_downtime_deploy.py
-            chmod +x /dockerProjects/hoit/zero_downtime_deploy.py
-            /dockerProjects/hoit/zero_downtime_deploy.py
+            mkdir -p /home/ubuntu/dockerProjects/hoit
+            curl -o /home/ubuntu/dockerProjects/hoit/zero_downtime_deploy.py https://raw.githubusercontent.com/survival-for-4000/test-back/main/infraScript/zero_downtime_deploy.py
+            chmod +x /home/ubuntu/dockerProjects/hoit/zero_downtime_deploy.py
+            /home/ubuntu/dockerProjects/hoit/zero_downtime_deploy.py

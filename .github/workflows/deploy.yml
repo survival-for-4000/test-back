@@ -10,6 +10,11 @@ on:
       - 'infraScript/**'
     branches:
       - 'main'
+permissions:
+  contents: write
+  packages: write  # 이 권한이 중요!
+  issues: write
+  pull-requests: write
 jobs:
   makeTagAndRelease:
     runs-on: ubuntu-latest

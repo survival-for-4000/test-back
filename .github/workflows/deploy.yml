@@ -10,6 +10,13 @@ on:
       - 'infraScript/**'
     branches:
       - 'main'
+
+# 이 부분을 추가
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 jobs:
   makeTagAndRelease:
     runs-on: ubuntu-latest

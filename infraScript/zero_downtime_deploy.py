@@ -25,6 +25,14 @@ class ServiceManager:
         self.next_name: Optional[str] = None
         self.next_port: Optional[int] = None
 
+    def _run_command(self, cmd: str) -> int:
+        """명령어 실행 및 결과 반환"""
+        logger.info(f"실행 명령: {cmd}")
+        result = os.system(cmd)
+        if result != 0:
+            logger.warning(f"명령 실행 실패 (exit code: {result}): {cmd}")
+        return result
+
     def _find_current_service(self) -> None:
         """현재 실행 중인 서비스를 찾는 함수"""
         logger.info("현재 실행 중인 서비스 확인...")
@@ -54,30 +62,34 @@ class ServiceManager:
     def _remove_container(self, name: str) -> None:
         """Docker 컨테이너를 제거하는 함수"""
         logger.info(f"컨테이너 {name} 제거 중...")
-        os.system(f"docker stop {name} 2> /dev/null")
+        self._run_command(f"sudo docker stop {name} 2> /dev/null")
         time.sleep(2)
-        os.system(f"docker rm -f {name} 2> /dev/null")
+        self._run_command(f"sudo docker rm -f {name} 2> /dev/null")
 
     def _run_container(self, name: str, port: int) -> None:
         """Docker 컨테이너를 실행하는 함수"""
         logger.info(f"컨테이너 {name} 실행 중... (포트: {port})")
 
         # volumes 디렉토리 생성 (절대 경로 사용)
-        os.system("mkdir -p /home/ubuntu/dockerProjects/hoit/volumes/gen")
+        self._run_command("sudo mkdir -p /home/ubuntu/dockerProjects/hoit/volumes/gen")
+        self._run_command("sudo chown -R ubuntu:ubuntu /home/ubuntu/dockerProjects/hoit/volumes")
 
-        # 컨테이너 실행 (볼륨 경로 수정)
-        cmd = (f"docker run -d --name={name} --restart unless-stopped "
+        # 컨테이너 실행 (sudo 사용)
+        cmd = (f"sudo docker run -d --name={name} --restart unless-stopped "
                f"-p {port}:8090 -e TZ=Asia/Seoul "
                f"-v /home/ubuntu/dockerProjects/hoit/volumes/gen:/gen "
                f"ghcr.io/survival-for-4000/hoit")
 
-        logger.info(f"실행 명령: {cmd}")
-        result = os.system(cmd)
+        result = self._run_command(cmd)
         if result != 0:
             logger.error(f"컨테이너 {name} 실행 실패 (exit code: {result})")
             raise Exception(f"Failed to run container {name}")
 
         logger.info(f"컨테이너 {name} 실행 성공")
+
+        # 컨테이너 상태 확인
+        time.sleep(5)
+        self._run_command(f"sudo docker logs {name}")
 
     def _switch_port(self) -> None:
         """Socat 포트를 전환하는 함수"""
@@ -87,13 +99,22 @@ class ServiceManager:
 
         if pid:
             logger.info(f"기존 socat 프로세스 종료 (PID: {pid})")
-            os.system(f"kill -9 {pid} 2>/dev/null")
+            self._run_command(f"kill -9 {pid} 2>/dev/null")
 
         time.sleep(5)
 
         socat_cmd = f"nohup socat -t0 TCP-LISTEN:{self.socat_port},fork,reuseaddr TCP:localhost:{self.next_port} &>/dev/null &"
-        logger.info(f"새 socat 프로세스 시작: {socat_cmd}")
-        os.system(socat_cmd)
+        logger.info(f"새 socat 프로세스 시작")
+        self._run_command(socat_cmd)
+
+        # socat 프로세스 확인
+        time.sleep(2)
+        check_cmd = f"ps aux | grep 'socat -t0 TCP-LISTEN:{self.socat_port}' | grep -v grep"
+        result = subprocess.getoutput(check_cmd)
+        if result:
+            logger.info("Socat 프로세스 시작 성공")
+        else:
+            logger.warning("Socat 프로세스 시작 확인 실패")
 
     def _is_service_up(self, port: int) -> bool:
         """서비스 상태를 확인하는 함수"""
@@ -116,6 +137,13 @@ class ServiceManager:
         logger.info(f"{name} 서비스 시작 대기 중...")
         start_time = time.time()
 
+        # 첫 30초는 더 자주 체크 (컨테이너 시작 시간)
+        for i in range(10):  # 30초간 3초마다
+            elapsed = int(time.time() - start_time)
+            logger.info(f"초기 대기 중... ({elapsed}s)")
+            time.sleep(3)
+
+        # 이후 정상적인 헬스 체크
         while time.time() - start_time < self.max_wait_time:
             if self._is_service_up(port):
                 logger.info(f"{name} 서비스가 정상적으로 시작되었습니다!")
@@ -123,6 +151,11 @@ class ServiceManager:
 
             elapsed = int(time.time() - start_time)
             logger.info(f"Waiting for {name} to be 'UP'... ({elapsed}s/{self.max_wait_time}s)")
+
+            # 컨테이너 상태도 확인
+            container_status = subprocess.getoutput(f"sudo docker ps --filter name={name} --format 'table {{{{.Status}}}}'")
+            logger.info(f"{name} 컨테이너 상태: {container_status}")
+
             time.sleep(self.sleep_duration)
 
         logger.error(f"{name} 서비스 시작 타임아웃 ({self.max_wait_time}초)")
@@ -132,6 +165,11 @@ class ServiceManager:
         """서비스를 업데이트하는 메인 함수"""
         try:
             logger.info("=== Zero Downtime Deployment 시작 ===")
+
+            # Docker 권한 재확인
+            logger.info("Docker 권한 확인...")
+            docker_test = subprocess.getoutput("sudo docker ps")
+            logger.info(f"Docker 테스트 결과: {docker_test[:100]}...")
 
             # 1. 현재 서비스 확인
             self._find_current_service()
@@ -161,8 +199,8 @@ class ServiceManager:
 
             # 6. 최종 상태 확인
             logger.info("=== 최종 상태 확인 ===")
-            os.system("docker ps")
-            os.system(f"netstat -tlnp | grep {self.socat_port}")
+            self._run_command("sudo docker ps")
+            self._run_command(f"netstat -tlnp | grep {self.socat_port}")
 
             return True
 
@@ -179,8 +217,9 @@ if __name__ == "__main__":
         manager = ServiceManager()
         success = manager.update_service()
         if not success:
+            logger.error("배포 실패!")
             exit(1)
-        print("배포가 성공적으로 완료되었습니다!")
+        logger.info("배포가 성공적으로 완료되었습니다!")
     except Exception as e:
         logger.error(f"스크립트 실행 실패: {e}")
         exit(1)

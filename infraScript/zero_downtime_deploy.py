@@ -6,12 +6,16 @@ import subprocess
 import time
 from typing import Dict, Optional
 
+# 로깅 설정
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class ServiceManager:
     # 초기화 함수
     def __init__(self, socat_port: int = 8081, sleep_duration: int = 3) -> None:
         self.socat_port: int = socat_port
         self.sleep_duration: int = sleep_duration
+        self.max_wait_time: int = max_wait_time  # 최대 대기 시간 (5분)
         self.services: Dict[str, int] = {
             'hoit_1': 8082,
             'hoit_2': 8083

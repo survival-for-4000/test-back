@@ -76,7 +76,8 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [buildImageAndPush]
+    needs: [ buildImageAndPush ]
+    timeout-minutes: 20
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -85,109 +86,144 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Execute deployment script via SSM
+      # Step 1: 환경 준비
+      - name: Prepare deployment environment
         run: |
-          # SSM 명령 실행
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
-              "echo \"=== 시작 시간: $(date) ===\"",
-              "echo \"=== 현재 사용자 ===\"",
+              "echo \"=== 환경 준비 시작: $(date) ===\"",
               "whoami",
-              "echo \"=== 현재 디렉토리 ===\"", 
               "pwd",
-              "echo \"=== 루트 디렉토리 내용 ===\"",
-              "ls -la /",
               "echo \"=== dockerProjects 디렉토리 생성 ===\"",
               "sudo mkdir -p /home/ubuntu/dockerProjects/hoit",
-              "echo \"=== dockerProjects 디렉토리 확인 ===\"",
-              "ls -la /home/ubuntu/dockerProjects/",
-              "echo \"=== 배포 스크립트 다운로드 ===\"",
-              "sudo curl -o /home/ubuntu/dockerProjects/hoit/zero_downtime_deploy.py https://raw.githubusercontent.com/sik2/deploy-demo-01-25/main/infraScript/zero_downtime_deploy.py",
-              "echo \"=== 스크립트 권한 설정 ===\"",
-              "sudo chmod +x /home/ubuntu/dockerProjects/hoit/zero_downtime_deploy.py",
-              "python3 /home/ubuntu/dockerProjects/hoit/zero_downtime_deploy.py",
-              "echo \"=== 스크립트 파일 확인 ===\"",
-              "ls -la /home/ubuntu/dockerProjects/hoit/",
-              "echo \"=== Docker 권한 임시 설정 ===\"",
+              "sudo chown ubuntu:ubuntu /home/ubuntu/dockerProjects/hoit",
+              "echo \"=== Docker 권한 설정 ===\"",
               "sudo chmod 666 /var/run/docker.sock",
               "echo \"=== 기존 컨테이너 정리 ===\"",
               "sudo docker rm -f hoit-app hoit_1 hoit_2 2>/dev/null || true",
-              "echo \"=== 최신 이미지 pull ===\"", 
-              "sudo docker pull ghcr.io/survival-for-4000/hoit:latest",
+              "echo \"=== 환경 준비 완료 ===\""
             ]' \
             --targets "Key=instanceids,Values=i-0a488308ec67f3dad" \
             --query 'Command.CommandId' \
             --output text)
-          
-          echo "Command ID: $COMMAND_ID"
-          
-          # 명령 완료까지 대기 (최대 5분)
-          echo "명령 실행 완료까지 대기 중..."
+
+          echo "Step 1 Command ID: $COMMAND_ID"
+
           aws ssm wait command-executed \
             --command-id $COMMAND_ID \
             --instance-id i-0a488308ec67f3dad \
-            --cli-read-timeout 300 \
-            --cli-connect-timeout 60
-          
-          # 실행 결과 출력
-          echo "=== SSM 명령 실행 결과 ==="
-          aws ssm get-command-invocation \
-            --command-id $COMMAND_ID \
-            --instance-id i-0a488308ec67f3dad \
-            --query 'StandardOutputContent' \
-            --output text
-          
-          # 에러 로그 출력
-          echo "=== SSM 명령 에러 로그 ==="
-          ERROR_OUTPUT=$(aws ssm get-command-invocation \
-            --command-id $COMMAND_ID \
-            --instance-id i-0a488308ec67f3dad \
-            --query 'StandardErrorContent' \
-            --output text)
-          
-          if [ "$ERROR_OUTPUT" != "None" ] && [ -n "$ERROR_OUTPUT" ]; then
-            echo "$ERROR_OUTPUT"
-          else
-            echo "에러 없음"
-          fi
-          
-          # 명령 상태 확인
+            --cli-read-timeout 180
+
+          # 결과 확인
           STATUS=$(aws ssm get-command-invocation \
             --command-id $COMMAND_ID \
             --instance-id i-0a488308ec67f3dad \
             --query 'Status' \
             --output text)
-          
-          echo "=== 최종 실행 상태: $STATUS ==="
-          
-          # 실패시 워크플로우 실패 처리
+
           if [ "$STATUS" != "Success" ]; then
-            echo "배포 실패!"
+            echo "환경 준비 실패!"
+            aws ssm get-command-invocation \
+              --command-id $COMMAND_ID \
+              --instance-id i-0a488308ec67f3dad \
+              --query 'StandardErrorContent' \
+              --output text
             exit 1
           fi
-          
+
+      # Step 2: 스크립트 다운로드 및 이미지 Pull
+      - name: Download script and pull image
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "echo \"=== 스크립트 다운로드 시작: $(date) ===\"",
+              "cd /home/ubuntu/dockerProjects/hoit",
+              "curl -o zero_downtime_deploy.py https://raw.githubusercontent.com/sik2/deploy-demo-01-25/main/infraScript/zero_downtime_deploy.py",
+              "chmod +x zero_downtime_deploy.py",
+              "ls -la",
+              "echo \"=== Docker 이미지 Pull 시작 ===\"",
+              "sudo docker pull ghcr.io/survival-for-4000/hoit:latest",
+              "echo \"=== 이미지 Pull 완료 ===\"",
+              "sudo docker images | grep hoit"
+            ]' \
+            --targets "Key=instanceids,Values=i-0a488308ec67f3dad" \
+            --query 'Command.CommandId' \
+            --output text)
+
+          echo "Step 2 Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --command-id $COMMAND_ID \
+            --instance-id i-0a488308ec67f3dad \
+            --cli-read-timeout 300
+
+          # 결과 확인
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id $COMMAND_ID \
+            --instance-id i-0a488308ec67f3dad \
+            --query 'Status' \
+            --output text)
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "스크립트 다운로드/이미지 Pull 실패!"
+            aws ssm get-command-invocation \
+              --command-id $COMMAND_ID \
+              --instance-id i-0a488308ec67f3dad \
+              --query 'StandardErrorContent' \
+              --output text
+            exit 1
+          fi
+
+      # Step 3: Python 스크립트 실행
+      - name: Execute deployment script
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "echo \"=== 배포 스크립트 실행 시작: $(date) ===\"",
+              "cd /home/ubuntu/dockerProjects/hoit",
+              "python3 zero_downtime_deploy.py",
+              "echo \"=== 배포 스크립트 실행 완료: $(date) ===\"",
+              "echo \"=== 실행 중인 컨테이너 확인 ===\"",
+              "sudo docker ps",
+              "echo \"=== 포트 확인 ===\"",
+              "sudo netstat -tlnp | grep 808"
+            ]' \
+            --targets "Key=instanceids,Values=i-0a488308ec67f3dad" \
+            --query 'Command.CommandId' \
+            --output text)
+
+          echo "Step 3 Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --command-id $COMMAND_ID \
+            --instance-id i-0a488308ec67f3dad \
+            --cli-read-timeout 600
+
+          # 결과 확인
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id $COMMAND_ID \
+            --instance-id i-0a488308ec67f3dad \
+            --query 'Status' \
+            --output text)
+
+          echo "=== 배포 스크립트 실행 결과 ==="
+          aws ssm get-command-invocation \
+            --command-id $COMMAND_ID \
+            --instance-id i-0a488308ec67f3dad \
+            --query 'StandardOutputContent' \
+            --output text
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "배포 스크립트 실행 실패!"
+            aws ssm get-command-invocation \
+              --command-id $COMMAND_ID \
+              --instance-id i-0a488308ec67f3dad \
+              --query 'StandardErrorContent' \
+              --output text
+            exit 1
+          fi
+
           echo "배포 성공!"
-#  deploy:
-#    runs-on: ubuntu-latest
-#    needs: [ buildImageAndPush ]
-#    steps:
-#      - name: AWS SSM Send-Command
-#        uses: peterkimzz/aws-ssm-send-command@master
-#        id: ssm
-#        with:
-#          aws-region: ${{ secrets.AWS_REGION }}
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          instance-ids: "i-0a488308ec67f3dad"
-#          working-directory: /
-#          comment: Deploy
-#          command: |
-#            whoami
-#            pwd
-#            ls -al
-#            mkdir -p /dockerProjects/blog
-#            ls -la /dockerProjects/
-#            curl -o /dockerProjects/blog/zero_downtime_deploy.py https://raw.githubusercontent.com/sik2/deploy-demo-01-25/main/infraScript/zero_downtime_deploy.py
-#            chmod +x /dockerProjects/blog/zero_downtime_deploy.py
-#            /dockerProjects/blog/zero_downtime_deploy.py

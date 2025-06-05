@@ -78,7 +78,7 @@ class ServiceManager:
         cmd = (f"sudo docker run -d --name={name} --restart unless-stopped "
                f"-p {port}:8090 -e TZ=Asia/Seoul "
                f"-v /home/ubuntu/dockerProjects/hoit/volumes/gen:/gen "
-               f"ghcr.io/survival-for-4000/hoit")
+               f"ghcr.io/survival-for-4000/hoit:latest")
 
         result = self._run_command(cmd)
         if result != 0:

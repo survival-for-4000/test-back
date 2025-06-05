@@ -88,7 +88,11 @@ jobs:
           working-directory: /
           comment: Deploy
           command: |
+            whoami
+            pwd
+            ls -al
             mkdir -p /dockerProjects/blog
+            ls -la /dockerProjects/
             curl -o /dockerProjects/blog/zero_downtime_deploy.py https://raw.githubusercontent.com/sik2/deploy-demo-01-25/main/infraScript/zero_downtime_deploy.py
             chmod +x /dockerProjects/blog/zero_downtime_deploy.py
             /dockerProjects/blog/zero_downtime_deploy.py

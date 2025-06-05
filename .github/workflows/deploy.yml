@@ -106,6 +106,7 @@ jobs:
               "sudo curl -o /home/ubuntu/dockerProjects/hoit/zero_downtime_deploy.py https://raw.githubusercontent.com/sik2/deploy-demo-01-25/main/infraScript/zero_downtime_deploy.py",
               "echo \"=== 스크립트 권한 설정 ===\"",
               "sudo chmod +x /home/ubuntu/dockerProjects/hoit/zero_downtime_deploy.py",
+              "python3 /home/ubuntu/dockerProjects/hoit/zero_downtime_deploy.py",
               "echo \"=== 스크립트 파일 확인 ===\"",
               "ls -la /home/ubuntu/dockerProjects/hoit/",
               "echo \"=== Docker 권한 임시 설정 ===\"",
@@ -114,16 +115,6 @@ jobs:
               "sudo docker rm -f hoit-app hoit_1 hoit_2 2>/dev/null || true",
               "echo \"=== 최신 이미지 pull ===\"", 
               "sudo docker pull ghcr.io/survival-for-4000/hoit:latest",
-              "echo \"=== 새 컨테이너 실행 ===\"",
-              "sudo docker run -d --name hoit-app --restart unless-stopped -p 8080:8080 ghcr.io/survival-for-4000/hoit:latest",
-              "echo \"=== 컨테이너 상태 확인 ===\"",
-              "sudo docker ps",
-              "echo \"=== 컨테이너 로그 확인 (최근 10줄) ===\"",
-              "sudo docker logs --tail 10 hoit-app",
-              "echo \"=== 애플리케이션 헬스체크 ===\"",
-              "sleep 10",
-              "curl -f http://localhost:8080 || echo \"애플리케이션 응답 없음\"",
-              "echo \"=== 완료 시간: $(date) ===\""
             ]' \
             --targets "Key=instanceids,Values=i-0a488308ec67f3dad" \
             --query 'Command.CommandId' \

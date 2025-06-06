@@ -17,7 +17,7 @@ spring:
             redirect-uri: https://api.hoit.ai.kr/auth/google/redirect
   data:
     redis:
-      host: 172.17.0.1
+      host: 172.17.0.2
       port: 6379
   jpa:
     hibernate:

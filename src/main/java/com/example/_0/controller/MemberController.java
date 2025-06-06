@@ -20,7 +20,7 @@ public class MemberController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MemberDto> getUserProfile(
             @AuthenticationPrincipal PrincipalDetails principalDetails
-    ) {
+    ) {;
         Member member = principalDetails.user();
         MemberDto userProfile = MemberDto.of(member);
 

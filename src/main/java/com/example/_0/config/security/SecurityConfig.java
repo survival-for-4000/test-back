@@ -59,7 +59,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(request ->
                         request.requestMatchers(
                                 "/",
-                                        "/hello",
                                         "/error",
                                         "/favicon.ico",
                                         "/swagger-ui/**",
@@ -68,8 +67,7 @@ public class SecurityConfig {
                                         "/oauth2/authorization/google",
                                         "/auth/google/redirect",
                                         "/actuator/health",
-                                        "/actuator/prometheus",
-                                        "/hello"
+                                        "/actuator/prometheus"
                                 ).permitAll()
                                 .anyRequest().authenticated()
                 )

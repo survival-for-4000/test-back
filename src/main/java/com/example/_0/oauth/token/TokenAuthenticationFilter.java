@@ -24,13 +24,17 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String accessToken = resolveToken(request);
+
         try {
-            if (tokenProvider.validateToken(accessToken)) {
+            // 토큰이 존재할 때만 검증 수행
+            if (accessToken != null && tokenProvider.validateToken(accessToken)) {
                 setAuthentication(accessToken);
             }
+            // 토큰이 없으면 그냥 통과 (permitAll 경로에서는 문제없음)
         } catch (ExpiredJwtException | JwtException e) {
             throw e;
         }
+
         filterChain.doFilter(request, response);
     }
 

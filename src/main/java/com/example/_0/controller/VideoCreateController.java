@@ -24,13 +24,14 @@ public class VideoCreateController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map> getVideoResult(
             @AuthenticationPrincipal PrincipalDetails principalDetails,
-            @RequestParam String prompt,
-            @RequestParam String model_name
+            @RequestParam Long id,
+            @RequestParam String prompt
     ) {
+
         Map result = videoCreateService.fetchVideoResult(
+                principalDetails.user(),
                 prompt,
-                String.valueOf(principalDetails.user().getId()),
-                model_name
+                id
         );
         return ResponseEntity.ok(result);
     }

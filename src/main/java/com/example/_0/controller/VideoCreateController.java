@@ -31,14 +31,18 @@ public class VideoCreateController {
     }
 
     @GetMapping("/video/status/{promptId}")
-    public ResponseEntity<Map<String, String>> checkVideoStatus(@PathVariable String promptId) {
+    public ResponseEntity<Map<String, String>> checkVideoStatus(
+            @AuthenticationPrincipal PrincipalDetails principalDetails,
+            @PathVariable String promptId) {
         String status = videoCreateService.getVideoStatus(promptId);
         return ResponseEntity.ok(Map.of("status", status));
     }
 
     @GetMapping("/video/result/{promptId}")
-    public ResponseEntity<byte[]> downloadVideo(@PathVariable String promptId) {
-        return videoCreateService.downloadVideoFile(promptId);
+    public ResponseEntity<String> getVideoUrl(
+            @AuthenticationPrincipal PrincipalDetails principalDetails,
+            @PathVariable String promptId) {
+        return videoCreateService.getVideoUrl(principalDetails.user(), promptId);
     }
 
 

@@ -2,10 +2,13 @@ package com.example._0.service;
 
 import com.example._0.entity.Member;
 import com.example._0.entity.Model;
+import com.example._0.entity.Video;
 import com.example._0.exception.UnauthorizedAccessException;
 import com.example._0.repository.ModelRepository;
+import com.example._0.repository.VideoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -19,6 +22,7 @@ public class VideoCreateService {
 
     private final RestTemplate restTemplate;
     private final ModelRepository modelRepository;
+    private final VideoRepository videoRepository;
 
     @Value("${webClient.url}")
     private String baseUrl;
@@ -61,27 +65,35 @@ public class VideoCreateService {
         return body.get("status").toString(); // e.g. "pending", "running", "done", etc.
     }
 
-    public ResponseEntity<byte[]> downloadVideoFile(String promptId) {
-        String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/video-result/" + promptId)
+    public ResponseEntity<String> getVideoUrl(Member member, String promptId) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(baseUrl + "/video-result/" + promptId)
                 .toUriString();
 
         try {
-            ResponseEntity<byte[]> response = restTemplate.exchange(
+            ResponseEntity<Map<String, String>> response = restTemplate.exchange(
                     url,
                     HttpMethod.GET,
                     null,
-                    byte[].class
+                    new ParameterizedTypeReference<Map<String, String>>() {}
             );
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDisposition(ContentDisposition.attachment().filename("video.mp4").build());
+            String publicUrl = (String) response.getBody().get("public_url");
+            Video video = Video.builder()
+                    .url(publicUrl)
+                    .promptId(promptId)
+                    .member(member)
+                    .build();
 
-            return new ResponseEntity<>(response.getBody(), headers, HttpStatus.OK);
+            videoRepository.save(video);
+
+
+            return ResponseEntity.ok(publicUrl);
         } catch (Exception e) {
-            throw new RuntimeException("비디오 다운로드 실패: " + e.getMessage(), e);
+            throw new RuntimeException("비디오 URL 조회 실패: " + e.getMessage(), e);
         }
     }
+
 
 
 

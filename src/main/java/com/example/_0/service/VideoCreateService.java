@@ -21,7 +21,7 @@ public class VideoCreateService {
     private String baseUrl;
 
     public Map fetchVideoResult(String prompt, String userId, String modelName) {
-        String url = UriComponentsBuilder.fromHttpUrl(baseUrl)
+        String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/get-video")
                 .queryParam("prompt", prompt)
                 .queryParam("user_id", userId)
                 .queryParam("model_name", modelName)

@@ -6,11 +6,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -20,19 +18,38 @@ public class VideoCreateController {
 
     private final VideoCreateService videoCreateService;
 
-    @GetMapping("/video-result")
+    @PostMapping("/video-result")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map> getVideoResult(
             @AuthenticationPrincipal PrincipalDetails principalDetails,
-            @RequestParam String prompt,
-            @RequestParam String model_name
+            @RequestBody Map<String, String> requestBody  // JSON body로 받기
     ) {
-        Map result = videoCreateService.fetchVideoResult(
-                prompt,
-                String.valueOf(principalDetails.user().getId()),
-                model_name
-        );
-        return ResponseEntity.ok(result);
+        String prompt = requestBody.get("prompt");
+        String model_name = requestBody.get("model_name");
+
+        System.out.println("=== Video Generation Request Received ===");
+        System.out.println("User ID: " + principalDetails.user().getId());
+        System.out.println("User Email: " + principalDetails.user().getEmail());
+        System.out.println("Prompt: " + prompt);
+        System.out.println("Model Name: " + model_name);
+        System.out.println("Request Time: " + LocalDateTime.now());
+        System.out.println("==========================================");
+
+        try {
+            Map result = videoCreateService.fetchVideoResult(
+                    prompt,
+                    String.valueOf(principalDetails.user().getId()),
+                    model_name
+            );
+
+            System.out.println("Video generation service completed successfully");
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            System.out.println("Error occurred during video generation: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 }
 

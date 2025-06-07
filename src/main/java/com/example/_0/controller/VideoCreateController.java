@@ -17,21 +17,30 @@ public class VideoCreateController {
 
     private final VideoCreateService videoCreateService;
 
-    @PostMapping("/video")
+    @PostMapping("/video/start")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Map> getVideoResult(
+    public ResponseEntity<Map<String, String>> startVideo(
             @AuthenticationPrincipal PrincipalDetails principalDetails,
             @RequestParam Long id,
             @RequestParam String prompt
     ) {
-
-        Map result = videoCreateService.fetchVideoResult(
-                principalDetails.user(),
-                prompt,
-                id
+        String promptId = videoCreateService.startVideoJob(
+                principalDetails.user(), prompt, id
         );
-
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(Map.of("promptId", promptId));
     }
+
+    @GetMapping("/video/status/{promptId}")
+    public ResponseEntity<Map<String, String>> checkVideoStatus(@PathVariable String promptId) {
+        String status = videoCreateService.getVideoStatus(promptId);
+        return ResponseEntity.ok(Map.of("status", status));
+    }
+
+    @GetMapping("/video/result/{promptId}")
+    public ResponseEntity<byte[]> downloadVideo(@PathVariable String promptId) {
+        return videoCreateService.downloadVideoFile(promptId);
+    }
+
+
 }
 

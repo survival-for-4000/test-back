@@ -1,6 +1,7 @@
 package com.example._0.dto;
 
 import com.example._0.entity.Model;
+import com.example._0.entity.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,11 +17,13 @@ public class ModelDto {
     private long id;
     private String name;
     private LocalDateTime createdAt;
+    private Status status;
 
     public static ModelDto of(Model model) {
         return ModelDto.builder()
                 .id(model.getId())
                 .name(model.getName())
+                .status(model.getStatus())
                 .createdAt(model.getCreatedAt())
                 .build();
     }

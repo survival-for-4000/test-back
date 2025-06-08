@@ -16,14 +16,14 @@ public class ModelService {
     public List<ModelDto> getMyModels(Member member) {
         return modelRepository.findByMember(member)
                 .stream()
-                .map(model -> new ModelDto(model.getId(), model.getName(), model.getCreatedAt()))
+                .map(ModelDto::of)
                 .toList();
     }
 
     public List<ModelDto> getSharedModels() {
         return modelRepository.findBySharedIsTrue()
                 .stream()
-                .map(model -> new ModelDto(model.getId(), model.getName(), model.getCreatedAt()))
+                .map(ModelDto::of)
                 .toList();
     }
 }

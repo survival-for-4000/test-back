@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,6 +23,14 @@ public class VideoController {
     @GetMapping("/list")
     public ResponseEntity<List<VideoDto>> getMyVideos(@AuthenticationPrincipal PrincipalDetails principalDetails) {
         List<VideoDto> videos = videoService.getVideosByMember(principalDetails.user());
+        return ResponseEntity.ok(videos);
+    }
+
+    @GetMapping("/{modelId}")
+    public ResponseEntity<List<VideoDto>> getMyVideosByModel(
+            @AuthenticationPrincipal PrincipalDetails principalDetails,
+            @PathVariable Long modelId) {
+        List<VideoDto> videos = videoService.getVideosByMemberAndModels(principalDetails.user(), modelId);
         return ResponseEntity.ok(videos);
     }
 }

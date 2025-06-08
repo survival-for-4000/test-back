@@ -15,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -47,12 +48,22 @@ public class VideoCreateService {
         if (body == null || !body.containsKey("prompt_id")) {
             throw new RuntimeException("prompt_id를 받아오지 못했습니다");
         }
+        String promptId = body.get("prompt_id").toString();
 
-        return body.get("prompt_id").toString();
+        Video video = Video.builder()
+                .url(null)
+                .prompt(prompt)
+                .model(model)
+                .taskId(promptId)
+                .member(member)
+                .build();
+        videoRepository.save(video);
+
+        return promptId;
     }
 
-    public String getVideoStatus(String promptId) {
-        String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/video-status/" + promptId)
+    public String getVideoStatus(String taskId) {
+        String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/video-status/" + taskId)
                 .toUriString();
 
         ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
@@ -65,9 +76,9 @@ public class VideoCreateService {
         return body.get("status").toString(); // e.g. "pending", "running", "done", etc.
     }
 
-    public ResponseEntity<String> getVideoUrl(Member member, String promptId) {
+    public ResponseEntity<String> getVideoUrl(Member member, String taskId) {
         String url = UriComponentsBuilder
-                .fromHttpUrl(baseUrl + "/video-result/" + promptId)
+                .fromHttpUrl(baseUrl + "/video-result/" + taskId)
                 .toUriString();
 
         try {
@@ -79,14 +90,10 @@ public class VideoCreateService {
             );
 
             String publicUrl = (String) response.getBody().get("public_url");
-            Video video = Video.builder()
-                    .url(publicUrl)
-                    .promptId(promptId)
-                    .member(member)
-                    .build();
-
+            Video video = videoRepository.findByTaskId(taskId)
+                    .orElseThrow(() -> new RuntimeException("Video not found"));
+            video.setUrl(publicUrl);
             videoRepository.save(video);
-
 
             return ResponseEntity.ok(publicUrl);
         } catch (Exception e) {

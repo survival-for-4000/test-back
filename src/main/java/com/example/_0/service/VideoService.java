@@ -21,4 +21,12 @@ public class VideoService {
                 .map(VideoDto::from)
                 .toList();
     }
+
+    public List<VideoDto> getVideosByMemberAndModels(Member member, Long modelId) {
+        List<Video> videos = videoRepository.findByMemberAndModelId(member, modelId);
+        return videos.stream()
+                .map(VideoDto::from)
+                .toList();
+    }
+
 }

@@ -10,14 +10,18 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class VideoDto {
     private String id;
-    private String promptId;
+    private String prompt;
+    private ModelDto model;
+    private String taskId;
     private String videoUrl;
     private String createdAt;
 
     public static VideoDto from(Video video) {
         return new VideoDto(
                 video.getId().toString(),
-                video.getPromptId(),
+                video.getPrompt(),
+                ModelDto.of(video.getModel()),
+                video.getTaskId(),
                 video.getUrl(),
                 video.getCreatedAt().toString()
         );

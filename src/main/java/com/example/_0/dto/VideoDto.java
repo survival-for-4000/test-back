@@ -20,7 +20,7 @@ public class VideoDto {
         return new VideoDto(
                 video.getId().toString(),
                 video.getPrompt(),
-                ModelDto.of(video.getModel()),
+                video.getModel() != null ? ModelDto.of(video.getModel()) : null, // null 체크 추가
                 video.getTaskId(),
                 video.getUrl(),
                 video.getCreatedAt().toString()

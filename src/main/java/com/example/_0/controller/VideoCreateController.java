@@ -21,8 +21,8 @@ public class VideoCreateController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, String>> startVideo(
             @AuthenticationPrincipal PrincipalDetails principalDetails,
-            @RequestParam Long id,
-            @RequestParam String prompt
+            @RequestParam String prompt,
+            @RequestParam Long id
     ) {
         String promptId = videoCreateService.startVideoJob(
                 principalDetails.user(), prompt, id

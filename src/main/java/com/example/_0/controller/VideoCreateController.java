@@ -34,7 +34,7 @@ public class VideoCreateController {
     public ResponseEntity<Map<String, String>> checkVideoStatus(
             @AuthenticationPrincipal PrincipalDetails principalDetails,
             @PathVariable String promptId) {
-        String status = videoCreateService.getVideoStatus(promptId);
+        String status = videoCreateService.getVideoStatus(principalDetails.user(), promptId);
         return ResponseEntity.ok(Map.of("status", status));
     }
 

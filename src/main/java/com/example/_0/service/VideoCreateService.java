@@ -62,7 +62,16 @@ public class VideoCreateService {
         return promptId;
     }
 
-    public String getVideoStatus(String taskId) {
+    public String getVideoStatus(Member member, String taskId) {
+        // ✅ 1단계: DB에서 해당 taskId가 요청한 사용자의 것인지 확인
+        Video video = videoRepository.findByTaskId(taskId)
+                .orElseThrow(() -> new RuntimeException("해당 작업을 찾을 수 없습니다."));
+
+        // ✅ 2단계: 사용자 권한 확인
+        if (!video.getMember().getId().equals(member.getId())) {
+            throw new UnauthorizedAccessException("접근 권한이 없습니다.");
+        }
+
         String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/video-status/" + taskId)
                 .toUriString();
 

@@ -7,6 +7,7 @@ import com.example._0.exception.UnauthorizedAccessException;
 import com.example._0.repository.ModelRepository;
 import com.example._0.repository.VideoRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -17,6 +18,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VideoCreateService {
@@ -40,7 +42,7 @@ public class VideoCreateService {
         System.out.println("✅ 모델 조회 성공 - 모델명: " + model.getName() + ", 소유자: " + model.getMember().getId() + ", 공유여부: " + model.isShared());
 
         if (!model.getMember().getId().equals(member.getId()) && !model.isShared()) {
-            System.out.println("🚫 권한 없음 - 요청자: " + member.getId() + ", 모델 소유자: " + model.getMember().getId() + ", 공유여부: " + model.isShared());
+            log.info("🚫 권한 없음 - 요청자: " + member.getId() + ", 모델 소유자: " + model.getMember().getId() + ", 공유여부: " + model.isShared());
             throw new UnauthorizedAccessException("접근 권한이 없습니다.");
         }
 
@@ -86,6 +88,7 @@ public class VideoCreateService {
     }
 
     public String getVideoStatus(Member member, String taskId) {
+
         System.out.println("🔍 영상 상태 조회 시작 - 사용자: " + member.getId() + ", TaskId: " + taskId);
 
         // ✅ 1단계: DB에서 해당 taskId가 요청한 사용자의 것인지 확인
@@ -102,6 +105,12 @@ public class VideoCreateService {
         if (!video.getMember().getId().equals(member.getId())) {
             System.out.println("🚫 권한 없음 - 요청자: " + member.getId() + ", 작업 소유자: " + video.getMember().getId());
             throw new UnauthorizedAccessException("접근 권한이 없습니다.");
+        }
+
+        // ✅ 3단계: DB에 URL이 이미 있으면 완료 상태 반환 (외부 API 호출 안 함!)
+        if (video.getUrl() != null && !video.getUrl().trim().isEmpty()) {
+            System.out.println("✅ DB에 URL이 이미 저장되어 있음 - 완료 상태 반환: " + taskId + ", URL: " + video.getUrl());
+            return "done";
         }
 
         String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/video-status/" + taskId)

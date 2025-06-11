@@ -7,6 +7,7 @@ import com.example._0.entity.Video;
 import com.example._0.exception.UnauthorizedAccessException;
 import com.example._0.repository.ModelRepository;
 import com.example._0.repository.VideoRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +35,16 @@ public class VideoCreateService {
     @Value("${webClient.url}")
     private String baseUrl;
 
+    private String videoBaseUrl;
+
+    @PostConstruct
+    public void init() {
+        this.videoBaseUrl = UriComponentsBuilder
+                .fromHttpUrl(baseUrl)
+                .path("/8000")
+                .toUriString();  // ← 여기가 중요!
+    }
+
     public String startVideoJob(Member member, String prompt, Long modelId) {
         Model model = modelRepository.findById(modelId)
                 .orElseThrow(() -> {
@@ -44,7 +55,7 @@ public class VideoCreateService {
             throw new UnauthorizedAccessException("접근 권한이 없습니다.");
         }
 
-        String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/start-video")
+        String url = UriComponentsBuilder.fromHttpUrl(videoBaseUrl + "/start-video")
                 .queryParam("prompt", prompt)
                 .queryParam("model_name", modelId)
                 .toUriString();
@@ -82,7 +93,7 @@ public class VideoCreateService {
 
     @Async
     public void checkVideoStatusAsync(Member member, String promptId) {
-        String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/video-status/" + promptId).toUriString();
+        String url = UriComponentsBuilder.fromHttpUrl(videoBaseUrl + "/video-status/" + promptId).toUriString();
 
         try {
             int retry = 0;
@@ -129,7 +140,7 @@ public class VideoCreateService {
             return "done";
         }
 
-        String url = UriComponentsBuilder.fromHttpUrl(baseUrl + "/video-status/" + taskId)
+        String url = UriComponentsBuilder.fromHttpUrl(videoBaseUrl + "/video-status/" + taskId)
                 .toUriString();
 
         try {
@@ -156,7 +167,7 @@ public class VideoCreateService {
     public ResponseEntity<String> getVideoUrl(Member member, String taskId) {
 
         String url = UriComponentsBuilder
-                .fromHttpUrl(baseUrl    + "/video-result/" + taskId)
+                .fromHttpUrl(videoBaseUrl   + "/video-result/" + taskId)
                 .toUriString();
 
         try {

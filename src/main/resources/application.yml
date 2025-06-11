@@ -5,6 +5,10 @@ server:
   port: 8090
   shutdown: graceful
 spring:
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
   config:
     activate:
       on-profile: default
@@ -21,7 +25,7 @@ spring:
       port: 6379
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
       show-sql: true
 management:
   endpoints:

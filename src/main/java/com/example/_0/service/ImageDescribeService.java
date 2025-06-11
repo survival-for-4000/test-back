@@ -10,6 +10,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -19,8 +20,11 @@ import org.springframework.http.HttpHeaders;
 import java.io.IOException;
 import java.util.List;
 
+import static com.example._0.entity.Status.NOT_STARTED;
+
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ImageDescribeService {
 
     @Value("${webClient.url}")
@@ -29,7 +33,7 @@ public class ImageDescribeService {
     private final RestTemplate restTemplate;
     private final ModelRepository modelRepository;
 
-    public String processImages(List<MultipartFile> files) throws IOException {
+    public String processImages(Long id, List<MultipartFile> files) throws IOException {
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
         for (MultipartFile file : files) {
@@ -41,23 +45,25 @@ public class ImageDescribeService {
             };
             body.add("files", resource);
         }
-
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-        String fullUrl = baseUrl + "/describe-images";
+        String fullUrl = baseUrl + "/8005" + "/describe-images?model_id=" + id;
         ResponseEntity<String> response = restTemplate.postForEntity(fullUrl, requestEntity, String.class);
 
         return response.getBody();
     }
 
-    public Model createModel(Member member, String name) {
+    public Long createModel(Member member, String name) {
         Model model = Model.builder()
                 .name(name)
                 .member(member)
+                .shared(false)
+                .status(NOT_STARTED)
                 .build();
-        return modelRepository.save(model);
+        modelRepository.save(model);
+        return model.getId();
     }
 }

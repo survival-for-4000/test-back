@@ -31,11 +31,11 @@ public class ImageDescribeController {
             return ResponseEntity.badRequest().build();
         }
 
-        imageDescribeService.createModel(principalDetails.user(), name);
+        Long id = imageDescribeService.createModel(principalDetails.user(), name);
 
         String result;
         try {
-            result = imageDescribeService.processImages(files);
+            result = imageDescribeService.processImages(id, files);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

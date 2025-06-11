@@ -23,7 +23,7 @@ public class ModelTrainService {
 
     public boolean requestFastApiTrain(String modelName) {
         try {
-            String fastApiUrl = baseUrl + "/run-deepspeed";
+            String fastApiUrl = baseUrl +"/8005" + "/run-deepspeed";
 
             Map<String, String> payload = new HashMap<>();
             payload.put("model_name", modelName);

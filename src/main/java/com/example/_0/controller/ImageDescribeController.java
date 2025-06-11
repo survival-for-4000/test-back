@@ -20,7 +20,7 @@ public class ImageDescribeController {
 
     private final ImageDescribeService imageDescribeService;
 
-    @PostMapping("/describe-image")
+    @PostMapping("/train")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> describeImages(
             @AuthenticationPrincipal PrincipalDetails principalDetails,

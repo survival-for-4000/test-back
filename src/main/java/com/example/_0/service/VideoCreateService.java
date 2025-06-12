@@ -392,9 +392,9 @@ public class VideoCreateService {
             }
 
             String status = body.get("status").toString();
-            if ("done".equals(status)) {
-                getVideoUrl(member, taskId);
-            }
+//            if ("done".equals(status)) {
+//                getVideoUrl(member, taskId);
+//            }
 
             return status;
 
